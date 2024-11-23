@@ -20,7 +20,7 @@ async function handler(conn, { message, args }) {
                                 `👀 *Vistas:* ${firstResult.views.toLocaleString()}\n\n` +
                                 `🔽 *Descargando el video...* 🎥\n\n` +
                                 `🎧 *The SukiBOT* se está encargando de todo para ti. ¡Espera un momento, monita~! 💖\n` +
-                                `> Si lo desea en solo audio, use *play2* *${firstResult.title}*`;
+                                `> Si lo desea en solo audio, use *play* *${firstResult.title}*`;
 
             const imageUrl = firstResult.thumbnail;
 
