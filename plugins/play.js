@@ -43,13 +43,11 @@ async function handler(conn, { message, args }) {
                         downloadUrl = getNestedValue(response.data, api.field);
                         if (downloadUrl) break;
                     }
-                } catch (err) {
-                    console.log(`Error en API: ${api.url} - ${err.message}`);
-                }
+                } catch (err) {}
             }
 
             if (downloadUrl) {
-                await sendAudioAsFile(conn, message, downloadUrl);
+                await sendAudioAsFile(conn, message, downloadUrl, firstResult.title);
             } else {
                 throw new Error('Ninguna API pudo proporcionar el audio.');
             }
@@ -57,13 +55,14 @@ async function handler(conn, { message, args }) {
             await conn.sendMessage(message.key.remoteJid, { text: '🔍 *The SukiBOT* no encontró resultados para tu búsqueda. Intenta con otro término. 💭' });
         }
     } catch (err) {
-        console.error(err);
         await conn.sendMessage(message.key.remoteJid, { text: '⚠️ *The SukiBOT* encontró un error al intentar descargar el archivo. Intenta con otro término de búsqueda. ❌' });
     }
 }
 
-async function sendAudioAsFile(conn, message, audioUrl) {
-    const audioPath = path.resolve(__dirname, `${Date.now()}_audio.mp3`);
+async function sendAudioAsFile(conn, message, audioUrl, audioTitle) {
+    const sanitizedTitle = audioTitle.replace(/[<>:"/\\|?*\x00-\x1F]/g, '');
+    const audioPath = path.resolve(__dirname, `${Date.now()}_${sanitizedTitle}.mp3`);
+
     try {
         const writer = fs.createWriteStream(audioPath);
         const audioStream = await axios({
@@ -82,12 +81,11 @@ async function sendAudioAsFile(conn, message, audioUrl) {
         await conn.sendMessage(message.key.remoteJid, {
             document: { url: audioPath },
             mimetype: 'audio/mpeg',
-            fileName: `audio.mp3`
+            fileName: `${sanitizedTitle}.mp3`
         });
 
         fs.unlinkSync(audioPath);
     } catch (err) {
-        console.error('Error al enviar el archivo de audio:', err);
         await conn.sendMessage(message.key.remoteJid, { text: '⚠️ *The SukiBOT* no pudo enviar el archivo de audio. Intenta nuevamente. ❌' });
     }
 }

@@ -2,21 +2,18 @@ const fs = require('fs');
 const path = require('path');
 const { users, comads } = require('../main.js');
 
-const sendMessage = async (conn, to, message, type = 'text', caption = '') => {
-    if (type === 'text') {
-        await conn.sendMessage(to, { text: message });
-    } else if (type === 'image') {
-        const imageBuffer = fs.readFileSync(message);
-        await conn.sendMessage(to, { image: imageBuffer, caption });
-    } else {
-        await conn.sendMessage(to, { text: 'Tipo de mensaje no soportado.' });
+const sendMessage = async (conn, to, message, options = {}, additionalOptions = {}) => {
+    try {
+        await conn.sendMessage(to, message, additionalOptions);
+    } catch (error) {
+        console.error('Error enviando el mensaje:', error);
     }
 };
 
 async function handler(conn, { message }) {
     const botPrefix = '/';
     const waitMessage = "*🌸 Espera un momento, monita~*\n\n> 💖 No hagas spam, ¿sí?";
-    await sendMessage(conn, message.key.remoteJid, waitMessage, 'text');
+    await sendMessage(conn, message.key.remoteJid, { text: waitMessage });
 
     const currentFile = path.basename(__filename);
     const files = fs.readdirSync(__dirname)
@@ -29,7 +26,7 @@ async function handler(conn, { message }) {
         dynamicMenu += `   ➻ ${botPrefix}${file}\n`;
     }
 
-    const menu = `
+    const menuCaption = `
 ━━━━━━━━━━━━━━━
 *✨ 𝑺𝒖𝒌𝒊𝒃𝒐𝒕 𝑴𝑬𝑵𝑼*
    ➻ Usuarios: ${users}
@@ -41,13 +38,26 @@ async function handler(conn, { message }) {
 ${dynamicMenu}━━━━━━━━━━━━━━━
 `;
 
-    const imagePath = './media/menu.jpg';
-
     try {
-        await sendMessage(conn, message.key.remoteJid, imagePath, 'image', menu);
+        const thumbnailBuffer = fs.readFileSync('./media/menu.jpg');
+
+        const menuMessage = {
+            text: menuCaption,
+            contextInfo: {
+                externalAdReply: {
+                    title: 'SukiBOT',
+                    body: 'Opciones del bot',
+                    thumbnail: thumbnailBuffer,
+                    mediaType: 1,
+                    sourceUrl: 'https://whatsapp.com/channel/0029VasWDKr8fewr4GjSb31g'
+                }
+            }
+        };
+
+        await sendMessage(conn, message.key.remoteJid, menuMessage, { quoted: message });
     } catch (err) {
         console.log('Error al enviar el menú:', err);
-        await sendMessage(conn, message.key.remoteJid, 'Error al enviar el menú.', 'text');
+        await sendMessage(conn, message.key.remoteJid, { text: 'Error al enviar el menú.' });
     }
 }
 

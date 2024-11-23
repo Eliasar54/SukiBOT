@@ -14,7 +14,7 @@ async function handler(conn, { message, args }) {
         const captionPrompt = `actuaras como SukiBot un bot de WhatsApp hecho desde 0 por EliasarYT y responderás como si creaste una imagen de: ${promptText}`;
 
         const imageResponse = await axios.get(
-            `https://api.ryzendesu.vip/api/ai/text2img?prompt=${encodeURIComponent(promptText)}`,
+            `https://eliasar-yt-api.vercel.app/api/ai/text2img?prompt=${encodeURIComponent(promptText)}`,
             { responseType: 'arraybuffer' }
         );
 
