@@ -11,8 +11,7 @@ const readDB = () => {
         const data = fs.readFileSync(path, 'utf-8');
         return JSON.parse(data);
     } catch (err) {
-        console.error('Error al leer DB:', err);
-        return null;
+        return { groups: {}, comads: 0, users: 0 };
     }
 };
 
@@ -26,31 +25,32 @@ const writeDB = (data) => {
 
 const incrementComms = () => {
     const db = readDB();
-    if (db) {
-        db.comads += 1;
-        writeDB(db);
-    }
+    db.comads += 1;
+    writeDB(db);
 };
 
 const incrementGrups = () => {
     const db = readDB();
-    if (db) {
-        db.grups += 1;
-        writeDB(db);
-    }
+    db.users += 1;
+    writeDB(db);
 };
 
 const incrementUsers = () => {
     const db = readDB();
-    if (db) {
-        db.users += 1;
-        writeDB(db);
-    }
+    db.users += 1;
+    writeDB(db);
 };
 
-const getWelcomeStatus = () => {
+const getWelcomeStatus = (groupId) => {
     const db = readDB();
-    return db ? db.welcomeStatus : 'off';
+    return db.groups[groupId]?.welcomeStatus || 'off';
+};
+
+const setWelcomeStatus = (groupId, status) => {
+    const db = readDB();
+    if (!db.groups[groupId]) db.groups[groupId] = {};
+    db.groups[groupId].welcomeStatus = status;
+    writeDB(db);
 };
 
 const sendText = async (conn, to, text) => {
@@ -111,16 +111,13 @@ const loadPlugins = () => {
                 delete require.cache[require.resolve(`${pathPlugins}/${file}`)];
                 const command = require(`${pathPlugins}/${file}`);
                 plugins[command.command] = command;
-            } catch (err) {
-                console.error(`Error cargando plugin ${file}:`, err.message);
-            }
+            } catch (err) {}
         }
     });
 };
 
 fs.watch(pathPlugins, { recursive: true }, (eventType, filename) => {
     if (eventType === 'change' || eventType === 'rename') {
-        console.log(`Detectado cambio en los plugins: ${filename}`);
         loadPlugins();
     }
 });
@@ -173,55 +170,32 @@ async function handleMessage(conn, message) {
                 await plugins[commandName].handler(conn, { message, args });
                 await logEvent(conn, message, `Comando: ${commandName}`, user, groupName, groupLink);
                 incrementComms();
-            } catch (err) {
-                console.error('Error ejecutando comando:', err.message);
-            }
-        } else {
-            console.log(`Comando no reconocido: ${commandName}`);
+            } catch {}
         }
-    } else if (msgContent?.stickerMessage) {
-        await logEvent(conn, message, 'Sticker', user, groupName, groupLink);
-    } else if (msgContent?.imageMessage) {
-        await logEvent(conn, message, 'Imagen', user, groupName, groupLink);
-    } else if (msgContent?.audioMessage) {
-        await logEvent(conn, message, 'Audio', user, groupName, groupLink);
-    } else if (msgContent?.videoMessage) {
-        await logEvent(conn, message, 'Video', user, groupName, groupLink);
-    } else if (!body) {
-        await logEvent(conn, message, 'Mensaje vacío o no soportado', user, groupName, groupLink);
     }
 }
 
 async function handleGroupEvents(conn, update) {
     const { id, participants, action } = update;
+    const db = readDB();
 
-    const welcomeStatus = getWelcomeStatus();
-    if (welcomeStatus !== 'on') return;
+    if (!db.groups[id]) {
+        db.groups[id] = { welcomeStatus: 'on' };
+        writeDB(db);
+        await sendText(conn, id, `¡El bot ahora está activo en este grupo! Use ${prefix}welcome on/off para configurar el mensaje de bienvenida.`);
+    }
 
     for (const participant of participants) {
         if (action === 'add') {
-            try {
+            const welcomeStatus = getWelcomeStatus(id);
+            if (welcomeStatus === 'on') {
                 const metadata = await conn.groupMetadata(id);
                 const groupName = metadata.subject;
-                await conn.sendMessage(id, {
-                    text: `Bienvenido @${participant.split('@')[0]} a *${groupName}*`,
-                    mentions: [participant],
-                });
+                await sendText(conn, id, `Bienvenido @${participant.split('@')[0]} a *${groupName}*`, { mentions: [participant] });
                 incrementGrups();
-            } catch (err) {
-                console.error('Error enviando mensaje de bienvenida:', err.message);
-            }
-        } else if (action === 'remove') {
-            try {
-                await conn.sendMessage(id, {
-                    text: `Adiós @${participant.split('@')[0]}`,
-                    mentions: [participant],
-                });
-            } catch (err) {
-                console.error('Error enviando mensaje de despedida:', err.message);
             }
         }
     }
 }
 
-module.exports = { handleMessage, handleGroupEvents, sendMedia, incrementComms, incrementGrups, incrementUsers, getWelcomeStatus };
+module.exports = { handleMessage, handleGroupEvents, sendMedia, incrementComms, incrementGrups, incrementUsers, getWelcomeStatus, setWelcomeStatus };

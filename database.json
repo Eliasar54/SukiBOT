@@ -1,6 +1,9 @@
 {
   "comads": 0,
-  "grups": 0,
   "users": 0,
-  "welcomeStatus": "off"
+  "groups": {
+    "120363370652209745@g.us": {
+      "welcomeStatus": "on"
+    }
+  }
 }

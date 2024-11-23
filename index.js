@@ -20,7 +20,7 @@ async function startBot() {
             console.log(err);
             return;
         }
-        console.log(chalk.green(data));
+       console.log(chalk.yellow(data));
     });
 
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -68,7 +68,7 @@ async function startBot() {
                     console.log(err);
                     return;
                 }
-                console.log(chalk.green(data));
+                console.log(chalk.magenta(data));
                 console.log(`Bot conectado como ${socket.user.id}`);
             });
         }
